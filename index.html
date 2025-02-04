@@ -4,17 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Skill Connections Explorer</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         :root {
-            --primary-bg: #121212;
-            --secondary-bg: #1E1E1E;
-            --card-bg: #252525;
-            --primary-text: #E0E0E0;
-            --secondary-text: #A0A0A0;
-            --accent-color: #3498db;
-            --border-color: #333;
+            --primary-bg: #0a0a0a;
+            --secondary-bg: #141414;
+            --card-bg: #1c1c1c;
+            --primary-text: #ffffff;
+            --secondary-text: #a0a0a0;
+            --accent-color: #2563eb;
+            --border-color: #2a2a2a;
+            --success-color: #059669;
+            --hover-bg: #262626;
         }
 
         * {
@@ -28,40 +30,59 @@
             background-color: var(--primary-bg);
             color: var(--primary-text);
             line-height: 1.6;
-            padding: 2rem;
+            min-height: 100vh;
         }
 
         .container {
             max-width: 1200px;
             margin: 0 auto;
+            padding: 2rem;
         }
 
         .header {
-            margin-bottom: 2rem;
             text-align: center;
+            padding: 3rem 1rem;
+            background: linear-gradient(to bottom, var(--secondary-bg), var(--primary-bg));
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 2rem;
         }
 
         .header h1 {
             font-size: 2.5rem;
-            font-weight: 600;
+            font-weight: 700;
             margin-bottom: 1rem;
+            background: linear-gradient(135deg, #60a5fa, #3b82f6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
 
         .header p {
             color: var(--secondary-text);
             font-size: 1.1rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .search-wrapper {
+            max-width: 800px;
+            margin: 0 auto 2rem;
+            padding: 0 1rem;
         }
 
         .search-container {
-            margin-bottom: 2rem;
             position: relative;
+            background: var(--secondary-bg);
+            border-radius: 12px;
+            padding: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
 
         .search-input {
             width: 100%;
             padding: 1rem 1.5rem;
             font-size: 1.1rem;
-            background-color: var(--secondary-bg);
+            background-color: transparent;
             border: 2px solid var(--border-color);
             border-radius: 8px;
             color: var(--primary-text);
@@ -71,54 +92,64 @@
         .search-input:focus {
             outline: none;
             border-color: var(--accent-color);
-            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+        }
+
+        .search-input::placeholder {
+            color: var(--secondary-text);
         }
 
         .autocomplete-list {
             position: absolute;
-            top: 100%;
+            top: calc(100% + 0.5rem);
             left: 0;
             right: 0;
             background-color: var(--secondary-bg);
             border: 1px solid var(--border-color);
-            border-radius: 0 0 8px 8px;
+            border-radius: 8px;
             max-height: 300px;
             overflow-y: auto;
             z-index: 1000;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
             display: none;
         }
 
         .autocomplete-item {
-            padding: 0.8rem 1.5rem;
+            padding: 1rem 1.5rem;
             cursor: pointer;
             transition: all 0.2s ease;
             border-bottom: 1px solid var(--border-color);
         }
 
+        .autocomplete-item:last-child {
+            border-bottom: none;
+        }
+
         .autocomplete-item:hover {
-            background-color: var(--card-bg);
+            background-color: var(--hover-bg);
         }
 
         .results-container {
             background-color: var(--secondary-bg);
-            border-radius: 12px;
+            border-radius: 16px;
             padding: 2rem;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            margin: 0 1rem;
+            display: none;
         }
 
         .results-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 1.5rem;
+            margin-bottom: 2rem;
             padding-bottom: 1rem;
             border-bottom: 1px solid var(--border-color);
         }
 
         .results-title {
             font-size: 1.5rem;
-            font-weight: 500;
+            font-weight: 600;
         }
 
         .results-count {
@@ -127,36 +158,64 @@
             padding: 0.5rem 1rem;
             border-radius: 20px;
             font-size: 0.9rem;
+            font-weight: 500;
         }
 
         .connections-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-            gap: 1rem;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
         }
 
         .connection-card {
             background-color: var(--card-bg);
-            border-radius: 8px;
-            padding: 1rem;
+            border-radius: 12px;
+            padding: 1.5rem;
             transition: all 0.3s ease;
             cursor: pointer;
+            border: 1px solid var(--border-color);
             animation: fadeIn 0.3s ease forwards;
         }
 
         .connection-card:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 12px 20px -8px rgba(0, 0, 0, 0.3);
+            border-color: var(--accent-color);
         }
 
         .connection-title {
-            font-weight: 500;
-            margin-bottom: 0.5rem;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            color: var(--primary-text);
+            font-size: 1.1rem;
         }
 
         .connection-meta {
             color: var(--secondary-text);
             font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .connection-meta::before {
+            content: "→";
+            color: var(--accent-color);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: var(--secondary-text);
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--secondary-text);
+            background: var(--card-bg);
+            border-radius: 12px;
+            margin: 1rem;
         }
 
         @keyframes fadeIn {
@@ -171,35 +230,98 @@
         }
 
         @media (max-width: 768px) {
-            body {
+            .container {
                 padding: 1rem;
+            }
+
+            .header {
+                padding: 2rem 1rem;
             }
 
             .header h1 {
                 font-size: 2rem;
             }
 
+            .search-wrapper {
+                padding: 0 0.5rem;
+            }
+
+            .results-container {
+                padding: 1rem;
+                margin: 0 0.5rem;
+            }
+
             .connections-grid {
                 grid-template-columns: 1fr;
+                gap: 1rem;
             }
+
+            .connection-card {
+                padding: 1.25rem;
+            }
+
+            .results-header {
+                flex-direction: column;
+                gap: 1rem;
+                align-items: flex-start;
+            }
+
+            .results-count {
+                align-self: flex-end;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header h1 {
+                font-size: 1.75rem;
+            }
+
+            .header p {
+                font-size: 1rem;
+            }
+
+            .search-input {
+                padding: 0.875rem 1.25rem;
+                font-size: 1rem;
+            }
+        }
+
+        /* Custom scrollbar for Webkit browsers */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--secondary-bg);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-color);
         }
     </style>
 </head>
 <body>
+    <div class="header">
+        <h1>Professional Skills Network</h1>
+        <p>Discover potential collaborations and expand your professional network</p>
+    </div>
+
     <div class="container">
-        <div class="header">
-            <h1>Skill Connections</h1>
-            <p>Discover related skills and possible collaborations</p>
+        <div class="search-wrapper">
+            <div class="search-container">
+                <input type="text" class="search-input" placeholder="Enter your profession or skill..." id="searchInput">
+                <div class="autocomplete-list" id="autocompleteList"></div>
+            </div>
         </div>
 
-        <div class="search-container">
-            <input type="text" class="search-input" placeholder="Search for a skill..." id="searchInput">
-            <div class="autocomplete-list" id="autocompleteList"></div>
-        </div>
-
-        <div class="results-container">
+        <div class="results-container" id="resultsContainer">
             <div class="results-header">
-                <div class="results-title">Related Skills</div>
+                <div class="results-title">Potential Collaborations</div>
                 <div class="results-count" id="resultsCount">0 connections</div>
             </div>
             <div class="connections-grid" id="connectionsGrid"></div>
@@ -207,66 +329,62 @@
     </div>
 
     <script>
-        let skillConnections = {};
+        let skillMatrix = {};
         let uniqueSkills = [];
 
-        // Load Excel file on page load
+        // Load and process the Excel file when the page loads
         window.addEventListener('load', async () => {
             try {
-                const response = await fetch('skill.xlsx');
+                const response = await fetch('skills.xlsx');
                 const arrayBuffer = await response.arrayBuffer();
                 const data = new Uint8Array(arrayBuffer);
                 const workbook = XLSX.read(data, { type: 'array' });
-                
-                // Get first sheet
                 const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-                const jsonData = XLSX.utils.sheet_to_json(worksheet);
-
-                processExcelData(jsonData);
+                const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                
+                processMatrixData(jsonData);
             } catch (error) {
                 console.error('Error loading Excel file:', error);
-                document.querySelector('.header p').textContent = 'Error loading data. Please check console for details.';
+                document.querySelector('.header p').textContent = 'Error loading data. Please ensure input.xlsx is present in the same directory.';
             }
         });
 
-        function processExcelData(data) {
-            skillConnections = {};
-            uniqueSkills = new Set();
+        function processMatrixData(data) {
+            // First row contains all skill names (excluding first empty cell)
+            const skills = data[0].slice(1).filter(Boolean);
+            uniqueSkills = skills;
 
-            // Process each row
-            data.forEach(row => {
-                const skill1 = row.Skill1;
-                const skill2 = row.Skill2;
-                const possibleCollaboration = String(row['Possible Collaboration']).toLowerCase();
-
-                if (possibleCollaboration === 'yes') {
-                    // Add skills to unique skills set
-                    uniqueSkills.add(skill1);
-                    uniqueSkills.add(skill2);
-
-                    // Add connections
-                    if (!skillConnections[skill1]) skillConnections[skill1] = new Set();
-                    if (!skillConnections[skill2]) skillConnections[skill2] = new Set();
-
-                    skillConnections[skill1].add(skill2);
-                    skillConnections[skill2].add(skill1);
-                }
+            // Process each row to build the collaboration matrix
+            skills.forEach((skill, rowIndex) => {
+                skillMatrix[skill] = [];
+                
+                // Check each column for collaboration possibilities
+                // Adding 1 to skip the first column which contains the skill names
+                data[rowIndex + 1].slice(1).forEach((cell, colIndex) => {
+                    if (cell === 'Yes' && skills[colIndex]) {
+                        skillMatrix[skill].push(skills[colIndex]);
+                    }
+                });
             });
 
-            // Convert unique skills to array and sort
-            uniqueSkills = Array.from(uniqueSkills).sort();
-
-            // Setup search functionality
             setupSearch();
         }
 
         function setupSearch() {
             const searchInput = document.getElementById('searchInput');
             const autocompleteList = document.getElementById('autocompleteList');
+            const resultsContainer = document.getElementById('resultsContainer');
 
             searchInput.addEventListener('input', function() {
                 const searchTerm = this.value.toLowerCase();
                 autocompleteList.innerHTML = '';
+
+                // Reset view when search is empty
+                if (searchTerm.length === 0) {
+                    autocompleteList.style.display = 'none';
+                    resultsContainer.style.display = 'none';
+                    return;
+                }
 
                 if (searchTerm.length < 2) {
                     autocompleteList.style.display = 'none';
@@ -275,7 +393,7 @@
 
                 const matches = uniqueSkills.filter(skill => 
                     skill.toLowerCase().includes(searchTerm)
-                ).slice(0, 10);
+                ).slice(0, 8);
 
                 if (matches.length > 0) {
                     autocompleteList.style.display = 'block';
@@ -295,8 +413,11 @@
         function selectSkill(skill) {
             const searchInput = document.getElementById('searchInput');
             const autocompleteList = document.getElementById('autocompleteList');
+            const resultsContainer = document.getElementById('resultsContainer');
+            
             searchInput.value = skill;
             autocompleteList.style.display = 'none';
+            resultsContainer.style.display = 'block';
 
             displayConnections(skill);
         }
@@ -304,15 +425,16 @@
         function displayConnections(skill) {
             const connectionsGrid = document.getElementById('connectionsGrid');
             const resultsCount = document.getElementById('resultsCount');
-            const connections = Array.from(skillConnections[skill] || []);
+            const connections = skillMatrix[skill] || [];
 
             connectionsGrid.innerHTML = '';
-            resultsCount.textContent = `${connections.length} connections`;
+            resultsCount.textContent = `${connections.length} potential collaborations`;
 
             if (connections.length === 0) {
                 connectionsGrid.innerHTML = `
-                    <div style="grid-column: 1/-1; text-align: center; color: var(--secondary-text);">
-                        No connections found for "${skill}"
+                    <div class="no-results">
+                        <h3>No Collaborations Found</h3>
+                        <p>No potential collaborations were found for "${skill}"</p>
                     </div>
                 `;
                 return;
@@ -324,7 +446,7 @@
                 card.style.animationDelay = `${index * 50}ms`;
                 card.innerHTML = `
                     <div class="connection-title">${connection}</div>
-                    <div class="connection-meta">Click to explore connections</div>
+                    <div class="connection-meta">View their collaboration options</div>
                 `;
                 card.addEventListener('click', () => selectSkill(connection));
                 connectionsGrid.appendChild(card);
