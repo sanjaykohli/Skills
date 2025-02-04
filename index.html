@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skill Connections Explorer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --primary-bg: #121212;
+            --secondary-bg: #1E1E1E;
+            --card-bg: #252525;
+            --primary-text: #E0E0E0;
+            --secondary-text: #A0A0A0;
+            --accent-color: #3498db;
+            --border-color: #333;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: var(--primary-bg);
+            color: var(--primary-text);
+            line-height: 1.6;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .header p {
+            color: var(--secondary-text);
+            font-size: 1.1rem;
+        }
+
+        .search-container {
+            margin-bottom: 2rem;
+            position: relative;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 1rem 1.5rem;
+            font-size: 1.1rem;
+            background-color: var(--secondary-bg);
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--primary-text);
+            transition: all 0.3s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+        }
+
+        .autocomplete-list {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background-color: var(--secondary-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 0 0 8px 8px;
+            max-height: 300px;
+            overflow-y: auto;
+            z-index: 1000;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            display: none;
+        }
+
+        .autocomplete-item {
+            padding: 0.8rem 1.5rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .autocomplete-item:hover {
+            background-color: var(--card-bg);
+        }
+
+        .results-container {
+            background-color: var(--secondary-bg);
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .results-title {
+            font-size: 1.5rem;
+            font-weight: 500;
+        }
+
+        .results-count {
+            background-color: var(--accent-color);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+        }
+
+        .connections-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+
+        .connection-card {
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            padding: 1rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            animation: fadeIn 0.3s ease forwards;
+        }
+
+        .connection-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .connection-title {
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+
+        .connection-meta {
+            color: var(--secondary-text);
+            font-size: 0.9rem;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 1rem;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .connections-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Skill Connections</h1>
+            <p>Discover related skills and possible collaborations</p>
+        </div>
+
+        <div class="search-container">
+            <input type="text" class="search-input" placeholder="Search for a skill..." id="searchInput">
+            <div class="autocomplete-list" id="autocompleteList"></div>
+        </div>
+
+        <div class="results-container">
+            <div class="results-header">
+                <div class="results-title">Related Skills</div>
+                <div class="results-count" id="resultsCount">0 connections</div>
+            </div>
+            <div class="connections-grid" id="connectionsGrid"></div>
+        </div>
+    </div>
+
+    <script>
+        let skillConnections = {};
+        let uniqueSkills = [];
+
+        // Load Excel file on page load
+        window.addEventListener('load', async () => {
+            try {
+                const response = await fetch('skill.xlsx');
+                const arrayBuffer = await response.arrayBuffer();
+                const data = new Uint8Array(arrayBuffer);
+                const workbook = XLSX.read(data, { type: 'array' });
+                
+                // Get first sheet
+                const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+                processExcelData(jsonData);
+            } catch (error) {
+                console.error('Error loading Excel file:', error);
+                document.querySelector('.header p').textContent = 'Error loading data. Please check console for details.';
+            }
+        });
+
+        function processExcelData(data) {
+            skillConnections = {};
+            uniqueSkills = new Set();
+
+            // Process each row
+            data.forEach(row => {
+                const skill1 = row.Skill1;
+                const skill2 = row.Skill2;
+                const possibleCollaboration = String(row['Possible Collaboration']).toLowerCase();
+
+                if (possibleCollaboration === 'yes') {
+                    // Add skills to unique skills set
+                    uniqueSkills.add(skill1);
+                    uniqueSkills.add(skill2);
+
+                    // Add connections
+                    if (!skillConnections[skill1]) skillConnections[skill1] = new Set();
+                    if (!skillConnections[skill2]) skillConnections[skill2] = new Set();
+
+                    skillConnections[skill1].add(skill2);
+                    skillConnections[skill2].add(skill1);
+                }
+            });
+
+            // Convert unique skills to array and sort
+            uniqueSkills = Array.from(uniqueSkills).sort();
+
+            // Setup search functionality
+            setupSearch();
+        }
+
+        function setupSearch() {
+            const searchInput = document.getElementById('searchInput');
+            const autocompleteList = document.getElementById('autocompleteList');
+
+            searchInput.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                autocompleteList.innerHTML = '';
+
+                if (searchTerm.length < 2) {
+                    autocompleteList.style.display = 'none';
+                    return;
+                }
+
+                const matches = uniqueSkills.filter(skill => 
+                    skill.toLowerCase().includes(searchTerm)
+                ).slice(0, 10);
+
+                if (matches.length > 0) {
+                    autocompleteList.style.display = 'block';
+                    matches.forEach(skill => {
+                        const div = document.createElement('div');
+                        div.className = 'autocomplete-item';
+                        div.textContent = skill;
+                        div.addEventListener('click', () => selectSkill(skill));
+                        autocompleteList.appendChild(div);
+                    });
+                } else {
+                    autocompleteList.style.display = 'none';
+                }
+            });
+        }
+
+        function selectSkill(skill) {
+            const searchInput = document.getElementById('searchInput');
+            const autocompleteList = document.getElementById('autocompleteList');
+            searchInput.value = skill;
+            autocompleteList.style.display = 'none';
+
+            displayConnections(skill);
+        }
+
+        function displayConnections(skill) {
+            const connectionsGrid = document.getElementById('connectionsGrid');
+            const resultsCount = document.getElementById('resultsCount');
+            const connections = Array.from(skillConnections[skill] || []);
+
+            connectionsGrid.innerHTML = '';
+            resultsCount.textContent = `${connections.length} connections`;
+
+            if (connections.length === 0) {
+                connectionsGrid.innerHTML = `
+                    <div style="grid-column: 1/-1; text-align: center; color: var(--secondary-text);">
+                        No connections found for "${skill}"
+                    </div>
+                `;
+                return;
+            }
+
+            connections.forEach((connection, index) => {
+                const card = document.createElement('div');
+                card.className = 'connection-card';
+                card.style.animationDelay = `${index * 50}ms`;
+                card.innerHTML = `
+                    <div class="connection-title">${connection}</div>
+                    <div class="connection-meta">Click to explore connections</div>
+                `;
+                card.addEventListener('click', () => selectSkill(connection));
+                connectionsGrid.appendChild(card);
+            });
+        }
+
+        // Close autocomplete on click outside
+        document.addEventListener('click', function(e) {
+            if (e.target !== document.getElementById('searchInput')) {
+                document.getElementById('autocompleteList').style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
