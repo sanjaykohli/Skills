@@ -11,20 +11,26 @@
             position: relative;
         }
         
-        .autocomplete-container {
+        .autocomplete-list {
             position: absolute;
             width: 100%;
-            max-height: 200px;
+            max-height: 300px;
             overflow-y: auto;
             z-index: 1000;
+            background: #1f2937;
+            border: 2px solid #4f46e5;
+            border-top: none;
+            border-radius: 0 0 0.5rem 0.5rem;
         }
         
         .autocomplete-item {
+            padding: 0.75rem 1rem;
+            cursor: pointer;
             transition: all 0.2s ease;
         }
         
         .autocomplete-item:hover {
-            background-color: rgba(99, 102, 241, 0.2);
+            background-color: #4f46e5;
         }
         
         .result-card {
@@ -38,22 +44,6 @@
                 opacity: 1;
                 transform: translateY(0);
             }
-        }
-        
-        .sort-button {
-            transition: all 0.3s ease;
-        }
-        
-        .sort-button:hover {
-            transform: translateY(-2px);
-        }
-        
-        .rating-badge {
-            transition: all 0.3s ease;
-        }
-        
-        .rating-badge:hover {
-            transform: scale(1.1);
         }
         
         /* Custom Scrollbar */
@@ -84,37 +74,32 @@
         </div>
 
         <!-- Search Section -->
-        <div class="mb-8">
-            <div class="search-container">
-                <div class="relative">
-                    <input 
-                        type="text" 
-                        id="searchInput" 
-                        placeholder="Search for a skill..."
-                        class="w-full p-4 pl-12 rounded-lg bg-gray-800 text-white border-2 border-indigo-600 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 focus:outline-none text-lg transition-all duration-300"
-                    >
-                    <div class="absolute inset-y-0 left-4 flex items-center">
-                        <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                        </svg>
-                    </div>
-                </div>
-                
-                <!-- Autocomplete Dropdown -->
-                <div id="autocompleteResults" class="autocomplete-container mt-2 bg-gray-800 border-2 border-indigo-600 rounded-lg hidden">
+        <div class="search-container mb-8">
+            <div class="relative">
+                <input 
+                    type="text" 
+                    id="searchInput" 
+                    placeholder="Search for a skill..."
+                    class="w-full p-4 pl-12 rounded-lg bg-gray-800 text-white border-2 border-indigo-600 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 focus:outline-none text-lg transition-all duration-300"
+                >
+                <div class="absolute inset-y-0 left-4 flex items-center">
+                    <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
                 </div>
             </div>
+            <div id="autocompleteList" class="autocomplete-list hidden"></div>
         </div>
 
         <!-- Sort Controls -->
         <div id="sortControls" class="mb-6 flex gap-4 hidden">
-            <button onclick="sortResults('asc')" class="sort-button px-4 py-2 bg-gray-800 text-white rounded-lg border border-indigo-600 hover:bg-indigo-600 transition-all duration-300">
+            <button onclick="sortResults('asc')" class="px-4 py-2 bg-gray-800 text-white rounded-lg border border-indigo-600 hover:bg-indigo-600 transition-all duration-300">
                 Sort A-Z
             </button>
-            <button onclick="sortResults('desc')" class="sort-button px-4 py-2 bg-gray-800 text-white rounded-lg border border-indigo-600 hover:bg-indigo-600 transition-all duration-300">
+            <button onclick="sortResults('desc')" class="px-4 py-2 bg-gray-800 text-white rounded-lg border border-indigo-600 hover:bg-indigo-600 transition-all duration-300">
                 Sort Z-A
             </button>
-            <button onclick="sortResults('rating')" class="sort-button px-4 py-2 bg-gray-800 text-white rounded-lg border border-indigo-600 hover:bg-indigo-600 transition-all duration-300">
+            <button onclick="sortResults('rating')" class="px-4 py-2 bg-gray-800 text-white rounded-lg border border-indigo-600 hover:bg-indigo-600 transition-all duration-300">
                 Sort by Rating
             </button>
         </div>
@@ -124,9 +109,9 @@
     </div>
 
     <script>
+        let skillMatrix = {};
+        let uniqueSkills = [];
         let collaborationData = [];
-        let currentResults = [];
-        let uniqueSkills = new Set();
 
         async function loadData() {
             try {
@@ -134,7 +119,6 @@
                 const arrayBuffer = await response.arrayBuffer();
                 const data = new Uint8Array(arrayBuffer);
                 const workbook = XLSX.read(data, { type: 'array' });
-                
                 const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
                 const jsonData = XLSX.utils.sheet_to_json(firstSheet);
                 
@@ -146,74 +130,57 @@
                 }));
 
                 // Build unique skills set
+                const skillSet = new Set();
                 collaborationData.forEach(item => {
-                    uniqueSkills.add(item.skill1);
-                    uniqueSkills.add(item.skill2);
+                    skillSet.add(item.skill1);
+                    skillSet.add(item.skill2);
                 });
+                uniqueSkills = Array.from(skillSet);
+                
+                setupSearch();
             } catch (error) {
                 console.error('Error loading data:', error);
                 showError('Error loading data. Please ensure data.xlsx is in the correct location.');
             }
         }
 
-        function showError(message) {
-            const resultsContainer = document.getElementById('searchResults');
-            resultsContainer.innerHTML = `
-                <div class="bg-red-900/50 border-2 border-red-500 rounded-lg p-6 text-center">
-                    <p class="text-red-400 text-lg">${message}</p>
-                </div>
-            `;
-        }
+        function setupSearch() {
+            const searchInput = document.getElementById('searchInput');
+            const autocompleteList = document.getElementById('autocompleteList');
 
-        function createResultCard(result, index) {
-            const ratingColors = {
-                3: 'bg-green-600 border-green-400',
-                2: 'bg-yellow-600 border-yellow-400',
-                1: 'bg-red-600 border-red-400'
-            };
+            searchInput.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                autocompleteList.innerHTML = '';
 
-            return `
-                <div class="result-card bg-gray-800 rounded-lg p-6 border-2 border-indigo-600 hover:border-indigo-400 transition-all duration-300" style="animation-delay: ${index * 100}ms">
-                    <div class="flex justify-between items-start mb-4">
-                        <div>
-                            <h3 class="text-xl font-semibold text-white mb-2">${result.skill2}</h3>
-                            <p class="text-indigo-400">Collaboration with ${result.skill1}</p>
-                        </div>
-                        <span class="rating-badge px-4 py-2 rounded-full ${ratingColors[result.rating]} text-white font-bold border-2">
-                            ${result.rating}/3
-                        </span>
-                    </div>
-                    <p class="text-gray-300 mt-4">${result.description}</p>
-                </div>
-            `;
-        }
+                if (searchTerm.length === 0) {
+                    autocompleteList.classList.add('hidden');
+                    document.getElementById('searchResults').innerHTML = '';
+                    document.getElementById('sortControls').classList.add('hidden');
+                    return;
+                }
 
-        function updateAutocomplete(searchTerm) {
-            const autocompleteContainer = document.getElementById('autocompleteResults');
-            if (!searchTerm) {
-                autocompleteContainer.classList.add('hidden');
-                return;
-            }
+                const matches = uniqueSkills.filter(skill => 
+                    skill.toLowerCase().includes(searchTerm)
+                );
 
-            const matches = Array.from(uniqueSkills)
-                .filter(skill => skill.toLowerCase().includes(searchTerm.toLowerCase()))
-                .slice(0, 5);
-
-            if (matches.length > 0) {
-                autocompleteContainer.innerHTML = matches.map(skill => `
-                    <div class="autocomplete-item p-3 text-white cursor-pointer hover:bg-indigo-600/20" onclick="selectSkill('${skill}')">
-                        ${skill}
-                    </div>
-                `).join('');
-                autocompleteContainer.classList.remove('hidden');
-            } else {
-                autocompleteContainer.classList.add('hidden');
-            }
+                if (matches.length > 0) {
+                    autocompleteList.classList.remove('hidden');
+                    matches.forEach(skill => {
+                        const div = document.createElement('div');
+                        div.className = 'autocomplete-item text-white hover:text-white';
+                        div.textContent = skill;
+                        div.addEventListener('click', () => selectSkill(skill));
+                        autocompleteList.appendChild(div);
+                    });
+                } else {
+                    autocompleteList.classList.add('hidden');
+                }
+            });
         }
 
         function selectSkill(skill) {
             document.getElementById('searchInput').value = skill;
-            document.getElementById('autocompleteResults').classList.add('hidden');
+            document.getElementById('autocompleteList').classList.add('hidden');
             handleSearch(skill);
         }
 
@@ -227,7 +194,7 @@
                 return;
             }
 
-            currentResults = collaborationData
+            const results = collaborationData
                 .filter(item => 
                     (item.skill1.toLowerCase().includes(searchTerm.toLowerCase()) ||
                      item.skill2.toLowerCase().includes(searchTerm.toLowerCase())) &&
@@ -235,7 +202,7 @@
                 )
                 .sort((a, b) => b.rating - a.rating);
 
-            if (currentResults.length === 0) {
+            if (results.length === 0) {
                 resultsContainer.innerHTML = `
                     <div class="bg-gray-800 rounded-lg p-8 text-center border-2 border-indigo-600">
                         <p class="text-gray-400 text-lg">No collaborations found for "${searchTerm}"</p>
@@ -246,58 +213,73 @@
             }
 
             sortControls.classList.remove('hidden');
-            displayResults(currentResults);
-        }
-
-        function sortResults(method) {
-            if (currentResults.length === 0) return;
-
-            switch (method) {
-                case 'asc':
-                    currentResults.sort((a, b) => a.skill2.localeCompare(b.skill2));
-                    break;
-                case 'desc':
-                    currentResults.sort((a, b) => b.skill2.localeCompare(a.skill2));
-                    break;
-                case 'rating':
-                    currentResults.sort((a, b) => b.rating - a.rating);
-                    break;
-            }
-
-            displayResults(currentResults);
+            displayResults(results);
         }
 
         function displayResults(results) {
             const resultsContainer = document.getElementById('searchResults');
             resultsContainer.innerHTML = '';
+            
             results.forEach((result, index) => {
-                resultsContainer.innerHTML += createResultCard(result, index);
+                const card = document.createElement('div');
+                card.className = 'result-card bg-gray-800 rounded-lg p-6 border-2 border-indigo-600 hover:border-indigo-400 transition-all duration-300';
+                card.style.animationDelay = `${index * 100}ms`;
+                
+                const ratingColors = {
+                    3: 'bg-green-600 border-green-400',
+                    2: 'bg-yellow-600 border-yellow-400',
+                    1: 'bg-red-600 border-red-400'
+                };
+
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h3 class="text-xl font-semibold text-white mb-2">${result.skill2}</h3>
+                            <p class="text-indigo-400">Collaboration with ${result.skill1}</p>
+                        </div>
+                        <span class="px-4 py-2 rounded-full ${ratingColors[result.rating]} text-white font-bold border-2">
+                            ${result.rating}/3
+                        </span>
+                    </div>
+                    <p class="text-gray-300 mt-4">${result.description}</p>
+                `;
+                
+                resultsContainer.appendChild(card);
             });
         }
 
-        document.addEventListener('DOMContentLoaded', async () => {
-            await loadData();
-            
-            const searchInput = document.getElementById('searchInput');
-            let debounceTimeout;
-
-            searchInput.addEventListener('input', (e) => {
-                const searchTerm = e.target.value.trim();
-                updateAutocomplete(searchTerm);
+        function sortResults(method) {
+            const results = Array.from(document.getElementById('searchResults').children);
+            const sortedResults = results.sort((a, b) => {
+                const titleA = a.querySelector('h3').textContent;
+                const titleB = b.querySelector('h3').textContent;
+                const ratingA = parseInt(a.querySelector('span').textContent);
+                const ratingB = parseInt(b.querySelector('span').textContent);
                 
-                clearTimeout(debounceTimeout);
-                debounceTimeout = setTimeout(() => {
-                    handleSearch(searchTerm);
-                }, 300);
-            });
-
-            // Close autocomplete when clicking outside
-            document.addEventListener('click', (e) => {
-                if (!e.target.closest('.search-container')) {
-                    document.getElementById('autocompleteResults').classList.add('hidden');
+                switch(method) {
+                    case 'asc':
+                        return titleA.localeCompare(titleB);
+                    case 'desc':
+                        return titleB.localeCompare(titleA);
+                    case 'rating':
+                        return ratingB - ratingA;
                 }
             });
+            
+            const container = document.getElementById('searchResults');
+            container.innerHTML = '';
+            sortedResults.forEach(result => container.appendChild(result));
+        }
+
+        // Close autocomplete when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.search-container')) {
+                document.getElementById('autocompleteList').classList.add('hidden');
+            }
         });
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', loadData);
     </script>
 </body>
 </html>
