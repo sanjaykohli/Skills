@@ -3,134 +3,184 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Professional Collaboration Search</title>
+    <title>Skill Collaboration Search</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
     <style>
-        :root {
-            --primary-bg: #1E1E1E;
-            --secondary-bg: #252526;
-            --text-color: #FFFFFF;
-            --accent-color: #007ACC;
-            --border-color: #3C3C3C;
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
-
-        body {
-            background-color: var(--primary-bg);
-            color: var(--text-color);
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
+        
+        @keyframes shimmer {
+            0% { background-position: -1000px 0; }
+            100% { background-position: 1000px 0; }
         }
-
-        .container {
-            width: 100%;
-            max-width: 800px;
-            padding: 20px;
-            background: var(--secondary-bg);
-            border-radius: 10px;
-            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, #1a1c2d 0%, #2d1a2c 100%);
         }
-
-        header {
-            text-align: center;
-            margin-bottom: 20px;
+        
+        .card-gradient {
+            background: linear-gradient(135deg, #2a2d4a 0%, #2d1a2c 100%);
         }
-
-        .search-container {
-            display: flex;
-            align-items: center;
-            background: var(--primary-bg);
-            padding: 10px;
-            border-radius: 5px;
-            border: 1px solid var(--border-color);
+        
+        .loading {
+            background: linear-gradient(90deg, #2a2d4a 25%, #3d3a6c 50%, #2a2d4a 75%);
+            background-size: 1000px 100%;
+            animation: shimmer 2s infinite linear;
         }
-
-        #search {
-            flex: 1;
-            background: transparent;
-            border: none;
-            color: var(--text-color);
-            font-size: 16px;
-            padding: 10px;
-            outline: none;
+        
+        .result-card {
+            animation: fadeIn 0.5s ease-out forwards;
         }
-
-        #clear-search {
-            background: none;
-            border: none;
-            color: var(--accent-color);
-            font-size: 18px;
-            cursor: pointer;
-        }
-
-        #results-section {
-            display: none;
-            margin-top: 20px;
-        }
-
-        .sorting-controls {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 10px;
-        }
-
-        #collaboration-list {
-            max-height: 300px;
-            overflow-y: auto;
-            border: 1px solid var(--border-color);
-            padding: 10px;
-            border-radius: 5px;
+        
+        .glass-effect {
+            backdrop-filter: blur(10px);
+            background: rgba(42, 45, 74, 0.3);
         }
     </style>
 </head>
-<body>
-    <div class="container">
-        <header>
-            <h1>Collaboration Network</h1>
-            <div class="search-container">
-                <input type="text" id="search" placeholder="Search for collaborations...">
-                <button id="clear-search">✖</button>
-            </div>
-        </header>
+<body class="gradient-bg min-h-screen p-8 text-white">
+    <div class="max-w-4xl mx-auto">
+        <div class="text-center mb-12">
+            <h1 class="text-5xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-400">
+                Skill Collaboration Search
+            </h1>
+            <p class="text-lg text-purple-200 opacity-80">Discover perfect skill combinations</p>
+        </div>
         
-        <section id="results-section">
-            <div class="sorting-controls">
-                <label for="sort-options">Sort by:</label>
-                <select id="sort-options">
-                    <option value="relevance">Relevance</option>
-                    <option value="date">Most Recent</option>
-                </select>
+        <div class="relative mb-8">
+            <div class="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+                <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
             </div>
-            
-            <div id="collaboration-list"></div>
-        </section>
+            <input 
+                type="text" 
+                id="searchInput" 
+                placeholder="Search for a skill..."
+                class="w-full p-4 pl-12 rounded-xl glass-effect border border-purple-500/30 focus:border-purple-500 focus:outline-none text-lg transition-all duration-300 placeholder-purple-300/50"
+            >
+        </div>
+
+        <div id="loading" class="hidden">
+            <div class="loading h-16 rounded-xl mb-4"></div>
+            <div class="loading h-16 rounded-xl mb-4"></div>
+            <div class="loading h-16 rounded-xl"></div>
+        </div>
+
+        <div id="searchResults" class="space-y-4"></div>
     </div>
 
     <script>
-        document.getElementById('search').addEventListener('input', function() {
-            const query = this.value.trim();
-            const resultsSection = document.getElementById('results-section');
-            
-            if (query.length > 0) {
-                resultsSection.style.display = 'block';
-                updateResults(query);
-            } else {
-                resultsSection.style.display = 'none';
+        let collaborationData = [];
+
+        async function loadData() {
+            try {
+                const response = await fetch('data.xlsx');
+                const arrayBuffer = await response.arrayBuffer();
+                const data = new Uint8Array(arrayBuffer);
+                const workbook = XLSX.read(data, { type: 'array' });
+                
+                // Get first sheet
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+                
+                collaborationData = jsonData.map(row => ({
+                    skill1: row.Skills1,
+                    skill2: row.Skill2,
+                    rating: parseInt(row.Rating),
+                    description: row.Description
+                }));
+                
+                document.getElementById('loading').classList.add('hidden');
+            } catch (error) {
+                console.error('Error loading data:', error);
+                document.getElementById('searchResults').innerHTML = `
+                    <div class="text-center p-8 glass-effect rounded-xl">
+                        <p class="text-red-400 text-lg">Error loading data. Please ensure data.xlsx is in the correct location.</p>
+                    </div>
+                `;
             }
-        });
-
-        document.getElementById('clear-search').addEventListener('click', function() {
-            document.getElementById('search').value = '';
-            document.getElementById('results-section').style.display = 'none';
-        });
-
-        function updateResults(query) {
-            const resultsContainer = document.getElementById('collaboration-list');
-            resultsContainer.innerHTML = `<p>Searching for: <strong>${query}</strong></p>`;
         }
+
+        function createResultCard(result) {
+            const ratingColors = {
+                3: 'from-green-400 to-emerald-500',
+                2: 'from-yellow-400 to-orange-500',
+                1: 'from-red-400 to-pink-500'
+            };
+
+            return `
+                <div class="result-card card-gradient rounded-xl p-6 shadow-lg transition-all duration-300 hover:transform hover:scale-102 hover:shadow-xl border border-purple-500/20" style="opacity: 0">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h3 class="text-2xl font-semibold text-white mb-2">${result.skill2}</h3>
+                            <p class="text-purple-200 opacity-80">Collaboration with ${result.skill1}</p>
+                        </div>
+                        <span class="px-4 py-2 rounded-lg bg-gradient-to-r ${ratingColors[result.rating]} text-white font-semibold shadow-lg">
+                            Rating: ${result.rating}
+                        </span>
+                    </div>
+                    <p class="text-gray-200 leading-relaxed">${result.description}</p>
+                </div>
+            `;
+        }
+
+        function handleSearch(searchTerm) {
+            const resultsContainer = document.getElementById('searchResults');
+            const loadingIndicator = document.getElementById('loading');
+            
+            resultsContainer.innerHTML = '';
+            
+            if (!searchTerm) return;
+
+            loadingIndicator.classList.remove('hidden');
+
+            setTimeout(() => {
+                const results = collaborationData
+                    .filter(item => 
+                        (item.skill1.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         item.skill2.toLowerCase().includes(searchTerm.toLowerCase())) &&
+                        item.rating > 0
+                    )
+                    .sort((a, b) => b.rating - a.rating);
+
+                loadingIndicator.classList.add('hidden');
+
+                if (results.length === 0) {
+                    resultsContainer.innerHTML = `
+                        <div class="text-center p-8 glass-effect rounded-xl">
+                            <p class="text-lg text-purple-200">No collaborations found for "${searchTerm}"</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                results.forEach((result, index) => {
+                    resultsContainer.innerHTML += createResultCard(result);
+                    setTimeout(() => {
+                        resultsContainer.children[index].style.opacity = '1';
+                    }, index * 100);
+                });
+            }, 500);
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            document.getElementById('loading').classList.remove('hidden');
+            await loadData();
+            
+            const searchInput = document.getElementById('searchInput');
+            let debounceTimeout;
+
+            searchInput.addEventListener('input', (e) => {
+                clearTimeout(debounceTimeout);
+                debounceTimeout = setTimeout(() => {
+                    handleSearch(e.target.value.trim());
+                }, 300);
+            });
+        });
     </script>
 </body>
 </html>
