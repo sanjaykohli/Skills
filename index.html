@@ -7,74 +7,126 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
     <style>
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
+        .search-container {
+            position: relative;
         }
         
-        @keyframes shimmer {
-            0% { background-position: -1000px 0; }
-            100% { background-position: 1000px 0; }
+        .autocomplete-container {
+            position: absolute;
+            width: 100%;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
         }
         
-        .gradient-bg {
-            background: linear-gradient(135deg, #1a1c2d 0%, #2d1a2c 100%);
+        .autocomplete-item {
+            transition: all 0.2s ease;
         }
         
-        .card-gradient {
-            background: linear-gradient(135deg, #2a2d4a 0%, #2d1a2c 100%);
-        }
-        
-        .loading {
-            background: linear-gradient(90deg, #2a2d4a 25%, #3d3a6c 50%, #2a2d4a 75%);
-            background-size: 1000px 100%;
-            animation: shimmer 2s infinite linear;
+        .autocomplete-item:hover {
+            background-color: rgba(99, 102, 241, 0.2);
         }
         
         .result-card {
-            animation: fadeIn 0.5s ease-out forwards;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeInUp 0.5s ease forwards;
         }
         
-        .glass-effect {
-            backdrop-filter: blur(10px);
-            background: rgba(42, 45, 74, 0.3);
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .sort-button {
+            transition: all 0.3s ease;
+        }
+        
+        .sort-button:hover {
+            transform: translateY(-2px);
+        }
+        
+        .rating-badge {
+            transition: all 0.3s ease;
+        }
+        
+        .rating-badge:hover {
+            transform: scale(1.1);
+        }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #1f2937;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #4f46e5;
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #4338ca;
         }
     </style>
 </head>
-<body class="gradient-bg min-h-screen p-8 text-white">
-    <div class="max-w-4xl mx-auto">
-        <div class="text-center mb-12">
-            <h1 class="text-5xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-400">
-                Skill Collaboration Search
-            </h1>
-            <p class="text-lg text-purple-200 opacity-80">Discover perfect skill combinations</p>
+<body class="bg-gray-900 min-h-screen p-8">
+    <div class="max-w-5xl mx-auto">
+        <!-- Header -->
+        <div class="mb-12 text-center">
+            <h1 class="text-4xl font-bold text-white mb-4">Professional Skill Collaboration Search</h1>
+            <p class="text-gray-400">Find and analyze skill combinations based on compatibility ratings</p>
         </div>
-        
-        <div class="relative mb-8">
-            <div class="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-                <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
+
+        <!-- Search Section -->
+        <div class="mb-8">
+            <div class="search-container">
+                <div class="relative">
+                    <input 
+                        type="text" 
+                        id="searchInput" 
+                        placeholder="Search for a skill..."
+                        class="w-full p-4 pl-12 rounded-lg bg-gray-800 text-white border-2 border-indigo-600 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 focus:outline-none text-lg transition-all duration-300"
+                    >
+                    <div class="absolute inset-y-0 left-4 flex items-center">
+                        <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </div>
+                </div>
+                
+                <!-- Autocomplete Dropdown -->
+                <div id="autocompleteResults" class="autocomplete-container mt-2 bg-gray-800 border-2 border-indigo-600 rounded-lg hidden">
+                </div>
             </div>
-            <input 
-                type="text" 
-                id="searchInput" 
-                placeholder="Search for a skill..."
-                class="w-full p-4 pl-12 rounded-xl glass-effect border border-purple-500/30 focus:border-purple-500 focus:outline-none text-lg transition-all duration-300 placeholder-purple-300/50"
-            >
         </div>
 
-        <div id="loading" class="hidden">
-            <div class="loading h-16 rounded-xl mb-4"></div>
-            <div class="loading h-16 rounded-xl mb-4"></div>
-            <div class="loading h-16 rounded-xl"></div>
+        <!-- Sort Controls -->
+        <div id="sortControls" class="mb-6 flex gap-4 hidden">
+            <button onclick="sortResults('asc')" class="sort-button px-4 py-2 bg-gray-800 text-white rounded-lg border border-indigo-600 hover:bg-indigo-600 transition-all duration-300">
+                Sort A-Z
+            </button>
+            <button onclick="sortResults('desc')" class="sort-button px-4 py-2 bg-gray-800 text-white rounded-lg border border-indigo-600 hover:bg-indigo-600 transition-all duration-300">
+                Sort Z-A
+            </button>
+            <button onclick="sortResults('rating')" class="sort-button px-4 py-2 bg-gray-800 text-white rounded-lg border border-indigo-600 hover:bg-indigo-600 transition-all duration-300">
+                Sort by Rating
+            </button>
         </div>
 
+        <!-- Results Section -->
         <div id="searchResults" class="space-y-4"></div>
     </div>
 
     <script>
         let collaborationData = [];
+        let currentResults = [];
+        let uniqueSkills = new Set();
 
         async function loadData() {
             try {
@@ -83,7 +135,6 @@
                 const data = new Uint8Array(arrayBuffer);
                 const workbook = XLSX.read(data, { type: 'array' });
                 
-                // Get first sheet
                 const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
                 const jsonData = XLSX.utils.sheet_to_json(firstSheet);
                 
@@ -93,92 +144,158 @@
                     rating: parseInt(row.Rating),
                     description: row.Description
                 }));
-                
-                document.getElementById('loading').classList.add('hidden');
+
+                // Build unique skills set
+                collaborationData.forEach(item => {
+                    uniqueSkills.add(item.skill1);
+                    uniqueSkills.add(item.skill2);
+                });
             } catch (error) {
                 console.error('Error loading data:', error);
-                document.getElementById('searchResults').innerHTML = `
-                    <div class="text-center p-8 glass-effect rounded-xl">
-                        <p class="text-red-400 text-lg">Error loading data. Please ensure data.xlsx is in the correct location.</p>
-                    </div>
-                `;
+                showError('Error loading data. Please ensure data.xlsx is in the correct location.');
             }
         }
 
-        function createResultCard(result) {
-            const ratingColors = {
-                3: 'from-green-400 to-emerald-500',
-                2: 'from-yellow-400 to-orange-500',
-                1: 'from-red-400 to-pink-500'
-            };
-
-            return `
-                <div class="result-card card-gradient rounded-xl p-6 shadow-lg transition-all duration-300 hover:transform hover:scale-102 hover:shadow-xl border border-purple-500/20" style="opacity: 0">
-                    <div class="flex justify-between items-start mb-4">
-                        <div>
-                            <h3 class="text-2xl font-semibold text-white mb-2">${result.skill2}</h3>
-                            <p class="text-purple-200 opacity-80">Collaboration with ${result.skill1}</p>
-                        </div>
-                        <span class="px-4 py-2 rounded-lg bg-gradient-to-r ${ratingColors[result.rating]} text-white font-semibold shadow-lg">
-                            Rating: ${result.rating}
-                        </span>
-                    </div>
-                    <p class="text-gray-200 leading-relaxed">${result.description}</p>
+        function showError(message) {
+            const resultsContainer = document.getElementById('searchResults');
+            resultsContainer.innerHTML = `
+                <div class="bg-red-900/50 border-2 border-red-500 rounded-lg p-6 text-center">
+                    <p class="text-red-400 text-lg">${message}</p>
                 </div>
             `;
         }
 
+        function createResultCard(result, index) {
+            const ratingColors = {
+                3: 'bg-green-600 border-green-400',
+                2: 'bg-yellow-600 border-yellow-400',
+                1: 'bg-red-600 border-red-400'
+            };
+
+            return `
+                <div class="result-card bg-gray-800 rounded-lg p-6 border-2 border-indigo-600 hover:border-indigo-400 transition-all duration-300" style="animation-delay: ${index * 100}ms">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h3 class="text-xl font-semibold text-white mb-2">${result.skill2}</h3>
+                            <p class="text-indigo-400">Collaboration with ${result.skill1}</p>
+                        </div>
+                        <span class="rating-badge px-4 py-2 rounded-full ${ratingColors[result.rating]} text-white font-bold border-2">
+                            ${result.rating}/3
+                        </span>
+                    </div>
+                    <p class="text-gray-300 mt-4">${result.description}</p>
+                </div>
+            `;
+        }
+
+        function updateAutocomplete(searchTerm) {
+            const autocompleteContainer = document.getElementById('autocompleteResults');
+            if (!searchTerm) {
+                autocompleteContainer.classList.add('hidden');
+                return;
+            }
+
+            const matches = Array.from(uniqueSkills)
+                .filter(skill => skill.toLowerCase().includes(searchTerm.toLowerCase()))
+                .slice(0, 5);
+
+            if (matches.length > 0) {
+                autocompleteContainer.innerHTML = matches.map(skill => `
+                    <div class="autocomplete-item p-3 text-white cursor-pointer hover:bg-indigo-600/20" onclick="selectSkill('${skill}')">
+                        ${skill}
+                    </div>
+                `).join('');
+                autocompleteContainer.classList.remove('hidden');
+            } else {
+                autocompleteContainer.classList.add('hidden');
+            }
+        }
+
+        function selectSkill(skill) {
+            document.getElementById('searchInput').value = skill;
+            document.getElementById('autocompleteResults').classList.add('hidden');
+            handleSearch(skill);
+        }
+
         function handleSearch(searchTerm) {
             const resultsContainer = document.getElementById('searchResults');
-            const loadingIndicator = document.getElementById('loading');
+            const sortControls = document.getElementById('sortControls');
             
+            if (!searchTerm) {
+                resultsContainer.innerHTML = '';
+                sortControls.classList.add('hidden');
+                return;
+            }
+
+            currentResults = collaborationData
+                .filter(item => 
+                    (item.skill1.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                     item.skill2.toLowerCase().includes(searchTerm.toLowerCase())) &&
+                    item.rating > 0
+                )
+                .sort((a, b) => b.rating - a.rating);
+
+            if (currentResults.length === 0) {
+                resultsContainer.innerHTML = `
+                    <div class="bg-gray-800 rounded-lg p-8 text-center border-2 border-indigo-600">
+                        <p class="text-gray-400 text-lg">No collaborations found for "${searchTerm}"</p>
+                    </div>
+                `;
+                sortControls.classList.add('hidden');
+                return;
+            }
+
+            sortControls.classList.remove('hidden');
+            displayResults(currentResults);
+        }
+
+        function sortResults(method) {
+            if (currentResults.length === 0) return;
+
+            switch (method) {
+                case 'asc':
+                    currentResults.sort((a, b) => a.skill2.localeCompare(b.skill2));
+                    break;
+                case 'desc':
+                    currentResults.sort((a, b) => b.skill2.localeCompare(a.skill2));
+                    break;
+                case 'rating':
+                    currentResults.sort((a, b) => b.rating - a.rating);
+                    break;
+            }
+
+            displayResults(currentResults);
+        }
+
+        function displayResults(results) {
+            const resultsContainer = document.getElementById('searchResults');
             resultsContainer.innerHTML = '';
-            
-            if (!searchTerm) return;
-
-            loadingIndicator.classList.remove('hidden');
-
-            setTimeout(() => {
-                const results = collaborationData
-                    .filter(item => 
-                        (item.skill1.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         item.skill2.toLowerCase().includes(searchTerm.toLowerCase())) &&
-                        item.rating > 0
-                    )
-                    .sort((a, b) => b.rating - a.rating);
-
-                loadingIndicator.classList.add('hidden');
-
-                if (results.length === 0) {
-                    resultsContainer.innerHTML = `
-                        <div class="text-center p-8 glass-effect rounded-xl">
-                            <p class="text-lg text-purple-200">No collaborations found for "${searchTerm}"</p>
-                        </div>
-                    `;
-                    return;
-                }
-
-                results.forEach((result, index) => {
-                    resultsContainer.innerHTML += createResultCard(result);
-                    setTimeout(() => {
-                        resultsContainer.children[index].style.opacity = '1';
-                    }, index * 100);
-                });
-            }, 500);
+            results.forEach((result, index) => {
+                resultsContainer.innerHTML += createResultCard(result, index);
+            });
         }
 
         document.addEventListener('DOMContentLoaded', async () => {
-            document.getElementById('loading').classList.remove('hidden');
             await loadData();
             
             const searchInput = document.getElementById('searchInput');
             let debounceTimeout;
 
             searchInput.addEventListener('input', (e) => {
+                const searchTerm = e.target.value.trim();
+                updateAutocomplete(searchTerm);
+                
                 clearTimeout(debounceTimeout);
                 debounceTimeout = setTimeout(() => {
-                    handleSearch(e.target.value.trim());
+                    handleSearch(searchTerm);
                 }, 300);
+            });
+
+            // Close autocomplete when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.search-container')) {
+                    document.getElementById('autocompleteResults').classList.add('hidden');
+                }
             });
         });
     </script>
