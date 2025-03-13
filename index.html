@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!-- <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -326,6 +326,543 @@
             // Create sorted list of unique skills
             uniqueSkills = Object.keys(skillMatrix).sort();
             setupSearch();
+        }
+
+        function setupSearch() {
+            const searchInput = document.getElementById('searchInput');
+            const autocompleteList = document.getElementById('autocompleteList');
+            const resultsContainer = document.getElementById('resultsContainer');
+
+            searchInput.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                autocompleteList.innerHTML = '';
+
+                if (searchTerm.length === 0) {
+                    autocompleteList.style.display = 'none';
+                    resultsContainer.style.display = 'none';
+                    return;
+                }
+
+                const matches = uniqueSkills.filter(skill => 
+                    skill.toLowerCase().includes(searchTerm)
+                );
+
+                if (matches.length > 0) {
+                    autocompleteList.style.display = 'block';
+                    matches.forEach(skill => {
+                        const div = document.createElement('div');
+                        div.className = 'autocomplete-item';
+                        div.textContent = skill;
+                        div.addEventListener('click', () => selectSkill(skill));
+                        autocompleteList.appendChild(div);
+                    });
+                } else {
+                    autocompleteList.style.display = 'none';
+                }
+            });
+
+            // Close autocomplete on click outside
+            document.addEventListener('click', function(e) {
+                if (e.target !== searchInput) {
+                    autocompleteList.style.display = 'none';
+                }
+            });
+        }
+
+        function selectSkill(skill) {
+            const searchInput = document.getElementById('searchInput');
+            const autocompleteList = document.getElementById('autocompleteList');
+            const resultsContainer = document.getElementById('resultsContainer');
+            
+            searchInput.value = skill;
+            autocompleteList.style.display = 'none';
+            resultsContainer.style.display = 'block';
+
+            displayConnections(skill);
+        }
+
+        function displayConnections(skill) {
+            const connectionsGrid = document.getElementById('connectionsGrid');
+            const resultsCount = document.getElementById('resultsCount');
+            const collaborators = skillMatrix[skill] || [];
+
+            connectionsGrid.innerHTML = '';
+            resultsCount.textContent = `${collaborators.length} collaborators`;
+
+            if (collaborators.length === 0) {
+                connectionsGrid.innerHTML = `
+                    <div style="grid-column: 1/-1; text-align: center; padding: 2rem;">
+                        <h3 style="margin-bottom: 1rem;">No Collaborators Found</h3>
+                        <p style="color: var(--secondary-text);">No professionals were found who can collaborate with ${skill}</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Sort collaborators by rating (highest first)
+            collaborators.sort((a, b) => b.rating - a.rating);
+
+            collaborators.forEach(collab => {
+                const card = document.createElement('div');
+                card.className = 'connection-card';
+                
+                card.innerHTML = `
+                    <div class="connection-title">
+                        <span>${collab.skill}</span>
+                        <span class="rating-badge">Rating: ${collab.rating}</span>
+                    </div>
+                    <div class="connection-description">${collab.description || 'No description available'}</div>
+                `;
+                
+                card.addEventListener('click', () => selectSkill(collab.skill));
+                connectionsGrid.appendChild(card);
+            });
+        }
+    </script>
+</body>
+</html>
+ -->
+
+
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Professional Skills Network</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --primary-bg: #ffffff;
+            --secondary-bg: #f5f5f5;
+            --card-bg: #ffffff;
+            --primary-text: #1a1a1a;
+            --secondary-text: #666666;
+            --border-color: #e0e0e0;
+            --hover-bg: #f8f8f8;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --primary-bg: #1a1a1a;
+                --secondary-bg: #242424;
+                --card-bg: #2a2a2a;
+                --primary-text: #ffffff;
+                --secondary-text: #a0a0a0;
+                --border-color: #333333;
+                --hover-bg: #333333;
+                --shadow-color: rgba(0, 0, 0, 0.2);
+            }
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: var(--primary-bg);
+            color: var(--primary-text);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .header {
+            text-align: center;
+            padding: 3rem 1rem;
+            background: var(--secondary-bg);
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: var(--primary-text);
+        }
+
+        .header p {
+            color: var(--secondary-text);
+            font-size: 1.1rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .legend {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding: 1rem;
+            background: var(--card-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .legend-title {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .legend-items {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .search-wrapper {
+            max-width: 800px;
+            margin: 0 auto 2rem;
+            position: relative;
+        }
+
+        .search-container {
+            position: relative;
+            background: var(--card-bg);
+            border-radius: 8px;
+            box-shadow: 0 2px 8px var(--shadow-color);
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 1rem 1.5rem;
+            font-size: 1.1rem;
+            background-color: transparent;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--primary-text);
+            transition: all 0.2s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--secondary-text);
+        }
+
+        .autocomplete-list {
+            position: absolute;
+            top: calc(100% + 0.5rem);
+            left: 0;
+            right: 0;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            max-height: 300px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+            box-shadow: 0 4px 12px var(--shadow-color);
+        }
+
+        .autocomplete-item {
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .autocomplete-item:hover {
+            background-color: var(--hover-bg);
+        }
+
+        .results-container {
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            padding: 2rem;
+            box-shadow: 0 2px 8px var(--shadow-color);
+            border: 1px solid var(--border-color);
+            display: none;
+        }
+
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .results-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .connections-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .connection-card {
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            padding: 1.5rem;
+            border: 1px solid var(--border-color);
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .connection-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px var(--shadow-color);
+        }
+
+        .connection-title {
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .rating-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            background: var(--secondary-bg);
+        }
+
+        .connection-description {
+            color: var(--secondary-text);
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+            line-height: 1.6;
+        }
+
+        /* New Styles for Skills Ranking */
+        .skills-ranking-container {
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            padding: 2rem;
+            box-shadow: 0 2px 8px var(--shadow-color);
+            border: 1px solid var(--border-color);
+            margin-bottom: 2rem;
+        }
+
+        .skills-ranking-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .skills-ranking-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .skills-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .skill-item {
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            padding: 1rem;
+            border: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .skill-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px var(--shadow-color);
+            background-color: var(--hover-bg);
+        }
+
+        .skill-name {
+            font-weight: 500;
+        }
+
+        .skill-count {
+            background-color: var(--secondary-bg);
+            color: var(--primary-text);
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            .header {
+                padding: 2rem 1rem;
+            }
+
+            .results-container, .skills-ranking-container {
+                padding: 1rem;
+            }
+
+            .connections-grid, .skills-list {
+                grid-template-columns: 1fr;
+            }
+
+            .legend-items {
+                gap: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Professional Skills Network</h1>
+        <p>Discover professional collaboration opportunities</p>
+    </div>
+
+    <div class="container">
+        <div class="legend">
+            <div class="legend-title">Collaboration Ratings</div>
+            <div class="legend-items">
+                <div class="legend-item">
+                    <span class="rating-badge">3</span>
+                    <span>Common</span>
+                </div>
+                <div class="legend-item">
+                    <span class="rating-badge">2</span>
+                    <span>Experimental</span>
+                </div>
+                <div class="legend-item">
+                    <span class="rating-badge">1</span>
+                    <span>Unlikely</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- New Skills Ranking Component -->
+        <div class="skills-ranking-container" id="skillsRankingContainer">
+            <div class="skills-ranking-header">
+                <div class="skills-ranking-title">Skills Ranked by Collaborations</div>
+                <div id="skillsCount"></div>
+            </div>
+            <div class="skills-list" id="skillsList"></div>
+        </div>
+
+        <div class="search-wrapper">
+            <div class="search-container">
+                <input type="text" class="search-input" placeholder="Search for a profession or skill..." id="searchInput">
+                <div class="autocomplete-list" id="autocompleteList"></div>
+            </div>
+        </div>
+
+        <div class="results-container" id="resultsContainer">
+            <div class="results-header">
+                <div class="results-title">Potential Collaborators</div>
+                <div id="resultsCount"></div>
+            </div>
+            <div class="connections-grid" id="connectionsGrid"></div>
+        </div>
+    </div>
+
+    <script>
+        let skillMatrix = {};
+        let uniqueSkills = [];
+
+        window.addEventListener('load', async () => {
+            try {
+                const response = await fetch('data.xlsx');
+                const arrayBuffer = await response.arrayBuffer();
+                const data = new Uint8Array(arrayBuffer);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                processMatrixData(jsonData);
+            } catch (error) {
+                console.error('Error loading Excel file:', error);
+                document.querySelector('.header p').textContent = 'Error loading data. Please try again later.';
+            }
+        });
+
+        function processMatrixData(data) {
+            // Skip header row and process all rows
+            for (let i = 1; i < data.length; i++) {
+                const skill1 = data[i][0];
+                const skill2 = data[i][1];
+                const rating = parseInt(data[i][2]);
+                const description = data[i][3];
+
+                // Only process if rating is greater than 0
+                if (rating > 0) {
+                    // Initialize arrays if they don't exist
+                    if (!skillMatrix[skill1]) skillMatrix[skill1] = [];
+                    if (!skillMatrix[skill2]) skillMatrix[skill2] = [];
+
+                    // Add bidirectional relationships
+                    skillMatrix[skill1].push({ skill: skill2, rating, description });
+                    skillMatrix[skill2].push({ skill: skill1, rating, description });
+                }
+            }
+
+            // Create sorted list of unique skills
+            uniqueSkills = Object.keys(skillMatrix).sort();
+            
+            // Display skills ranking
+            displaySkillsRanking();
+            
+            // Setup search functionality
+            setupSearch();
+        }
+
+        function displaySkillsRanking() {
+            const skillsList = document.getElementById('skillsList');
+            const skillsCount = document.getElementById('skillsCount');
+            
+            // Create an array of skills with their collaboration counts
+            const skillsWithCounts = uniqueSkills.map(skill => {
+                return {
+                    name: skill,
+                    count: skillMatrix[skill].length
+                };
+            });
+            
+            // Sort skills by collaboration count (descending)
+            skillsWithCounts.sort((a, b) => b.count - a.count);
+            
+            // Display total skills count
+            skillsCount.textContent = `${skillsWithCounts.length} skills`;
+            
+            // Create and append skill items to the list
+            skillsWithCounts.forEach(item => {
+                const skillItem = document.createElement('div');
+                skillItem.className = 'skill-item';
+                skillItem.innerHTML = `
+                    <span class="skill-name">${item.name}</span>
+                    <span class="skill-count">${item.count}</span>
+                `;
+                
+                // Add click event to select this skill
+                skillItem.addEventListener('click', () => selectSkill(item.name));
+                
+                skillsList.appendChild(skillItem);
+            });
         }
 
         function setupSearch() {
