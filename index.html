@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!-- <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -424,3 +424,686 @@
 
 
 
+ -->
+
+
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Professional Skills Network</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --primary-bg: #ffffff;
+            --secondary-bg: #f5f5f5;
+            --card-bg: #ffffff;
+            --primary-text: #1a1a1a;
+            --secondary-text: #666666;
+            --border-color: #e0e0e0;
+            --hover-bg: #f8f8f8;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+            --accent-color: #4a6cf7;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --primary-bg: #1a1a1a;
+                --secondary-bg: #242424;
+                --card-bg: #2a2a2a;
+                --primary-text: #ffffff;
+                --secondary-text: #a0a0a0;
+                --border-color: #333333;
+                --hover-bg: #333333;
+                --shadow-color: rgba(0, 0, 0, 0.2);
+                --accent-color: #6a8cff;
+            }
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: var(--primary-bg);
+            color: var(--primary-text);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .header {
+            text-align: center;
+            padding: 3rem 1rem;
+            background: var(--secondary-bg);
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 2rem;
+            position: relative;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: var(--primary-text);
+        }
+
+        .header p {
+            color: var(--secondary-text);
+            font-size: 1.1rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .legend {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding: 1rem;
+            background: var(--card-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .legend-title {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .legend-items {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .search-wrapper {
+            max-width: 800px;
+            margin: 0 auto 2rem;
+            position: relative;
+        }
+
+        .search-container {
+            position: relative;
+            background: var(--card-bg);
+            border-radius: 8px;
+            box-shadow: 0 2px 8px var(--shadow-color);
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 1rem 1.5rem;
+            font-size: 1.1rem;
+            background-color: transparent;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--primary-text);
+            transition: all 0.2s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--secondary-text);
+        }
+
+        .autocomplete-list {
+            position: absolute;
+            top: calc(100% + 0.5rem);
+            left: 0;
+            right: 0;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            max-height: 300px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+            box-shadow: 0 4px 12px var(--shadow-color);
+        }
+
+        .autocomplete-item {
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .autocomplete-item:hover {
+            background-color: var(--hover-bg);
+        }
+
+        .results-container {
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            padding: 2rem;
+            box-shadow: 0 2px 8px var(--shadow-color);
+            border: 1px solid var(--border-color);
+            display: none;
+        }
+
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .results-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .connections-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .connection-card {
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            padding: 1.5rem;
+            border: 1px solid var(--border-color);
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .connection-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px var(--shadow-color);
+        }
+
+        .connection-title {
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .rating-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            background: var(--secondary-bg);
+        }
+
+        .connection-description {
+            color: var(--secondary-text);
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+            line-height: 1.6;
+        }
+
+        /* New styles for skills ranking */
+        .btn {
+            padding: 0.75rem 1.5rem;
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background-color: var(--secondary-bg);
+            color: var(--primary-text);
+            border: 1px solid var(--border-color);
+        }
+
+        .navigation-btns {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 2rem;
+            gap: 1rem;
+        }
+
+        .skills-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px var(--shadow-color);
+        }
+
+        .skills-table th,
+        .skills-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .skills-table th {
+            background-color: var(--secondary-bg);
+            font-weight: 600;
+        }
+
+        .skills-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .skills-table tr:hover {
+            background-color: var(--hover-bg);
+        }
+
+        .ranking-number {
+            font-weight: 600;
+            width: 50px;
+            text-align: center;
+        }
+
+        .skill-name {
+            font-weight: 500;
+        }
+
+        .skill-collabs {
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .view-skill-btn {
+            padding: 0.5rem 1rem;
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.9rem;
+        }
+
+        .view-skill-btn:hover {
+            opacity: 0.9;
+        }
+
+        #homePage, #rankingPage {
+            display: none;
+        }
+
+        .page-active {
+            display: block !important;
+        }
+
+        .back-btn {
+            position: absolute;
+            left: 2rem;
+            top: 2rem;
+            background-color: transparent;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--primary-text);
+            font-weight: 500;
+        }
+
+        .back-btn:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            .header {
+                padding: 2rem 1rem;
+            }
+
+            .results-container {
+                padding: 1rem;
+            }
+
+            .connections-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .legend-items {
+                gap: 1rem;
+            }
+
+            .skills-table th,
+            .skills-table td {
+                padding: 0.75rem 0.5rem;
+            }
+
+            .ranking-number {
+                width: 40px;
+            }
+
+            .back-btn {
+                position: static;
+                margin-bottom: 1rem;
+                justify-content: center;
+            }
+
+            .header {
+                padding-top: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="homePage">
+        <div class="header">
+            <h1>Professional Skills Network</h1>
+            <p>Discover professional collaboration opportunities</p>
+        </div>
+
+        <div class="container">
+            <div class="navigation-btns">
+                <button class="btn" id="viewRankingBtn">View Skills Ranking</button>
+            </div>
+
+            <div class="legend">
+                <div class="legend-title">Collaboration Ratings</div>
+                <div class="legend-items">
+                    <div class="legend-item">
+                        <span class="rating-badge">3</span>
+                        <span>Common</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="rating-badge">2</span>
+                        <span>Experimental</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="rating-badge">1</span>
+                        <span>Unlikely</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="search-wrapper">
+                <div class="search-container">
+                    <input type="text" class="search-input" placeholder="Search for a profession or skill..." id="searchInput">
+                    <div class="autocomplete-list" id="autocompleteList"></div>
+                </div>
+            </div>
+
+            <div class="results-container" id="resultsContainer">
+                <div class="results-header">
+                    <div class="results-title">Potential Collaborators</div>
+                    <div id="resultsCount"></div>
+                </div>
+                <div class="connections-grid" id="connectionsGrid"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="rankingPage">
+        <div class="header">
+            <button class="back-btn" id="backToHomeBtn">← Back to Home</button>
+            <h1>Skills Ranking</h1>
+            <p>Skills ranked by total number of collaborations</p>
+        </div>
+
+        <div class="container">
+            <div class="results-container" style="display: block;">
+                <div class="results-header">
+                    <div class="results-title">All Skills</div>
+                    <div id="totalSkillsCount"></div>
+                </div>
+                
+                <table class="skills-table" id="skillsTable">
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Skill Name</th>
+                            <th>Collaborations</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="skillsTableBody">
+                        <!-- Skills will be loaded here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let skillMatrix = {};
+        let uniqueSkills = [];
+        let skillsRanking = [];
+
+        // Page Navigation
+        document.addEventListener('DOMContentLoaded', function() {
+            // Show Home Page by default
+            document.getElementById('homePage').classList.add('page-active');
+            
+            // Button event listeners for navigation
+            document.getElementById('viewRankingBtn').addEventListener('click', function() {
+                document.getElementById('homePage').classList.remove('page-active');
+                document.getElementById('rankingPage').classList.add('page-active');
+            });
+            
+            document.getElementById('backToHomeBtn').addEventListener('click', function() {
+                document.getElementById('rankingPage').classList.remove('page-active');
+                document.getElementById('homePage').classList.add('page-active');
+            });
+        });
+
+        window.addEventListener('load', async () => {
+            try {
+                const response = await fetch('data.xlsx');
+                const arrayBuffer = await response.arrayBuffer();
+                const data = new Uint8Array(arrayBuffer);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                processMatrixData(jsonData);
+            } catch (error) {
+                console.error('Error loading Excel file:', error);
+                document.querySelector('.header p').textContent = 'Error loading data. Please try again later.';
+            }
+        });
+
+        function processMatrixData(data) {
+            // Skip header row and process all rows
+            for (let i = 1; i < data.length; i++) {
+                const skill1 = data[i][0];
+                const skill2 = data[i][1];
+                const rating = parseInt(data[i][2]);
+                const description = data[i][3];
+
+                // Only process if rating is 1, 2, or 3
+                if (rating > 0) {
+                    // Initialize arrays if they don't exist
+                    if (!skillMatrix[skill1]) skillMatrix[skill1] = [];
+                    if (!skillMatrix[skill2]) skillMatrix[skill2] = [];
+
+                    // Add bidirectional relationships
+                    skillMatrix[skill1].push({ skill: skill2, rating, description });
+                    skillMatrix[skill2].push({ skill: skill1, rating, description });
+                }
+            }
+
+            // Create sorted list of unique skills
+            uniqueSkills = Object.keys(skillMatrix).sort();
+            
+            // Process skills ranking
+            processSkillsRanking();
+            
+            // Set up search functionality
+            setupSearch();
+        }
+
+        function processSkillsRanking() {
+            // Create array of skills with their collaboration counts
+            skillsRanking = uniqueSkills.map(skill => {
+                return {
+                    name: skill,
+                    collaborations: skillMatrix[skill].length
+                };
+            });
+            
+            // Sort by number of collaborations (descending)
+            skillsRanking.sort((a, b) => b.collaborations - a.collaborations);
+            
+            // Display in ranking table
+            displaySkillsRanking();
+        }
+
+        function displaySkillsRanking() {
+            const tableBody = document.getElementById('skillsTableBody');
+            const totalSkillsCount = document.getElementById('totalSkillsCount');
+            
+            totalSkillsCount.textContent = `${skillsRanking.length} skills`;
+            tableBody.innerHTML = '';
+            
+            skillsRanking.forEach((skill, index) => {
+                const row = document.createElement('tr');
+                
+                row.innerHTML = `
+                    <td class="ranking-number">${index + 1}</td>
+                    <td class="skill-name">${skill.name}</td>
+                    <td class="skill-collabs">${skill.collaborations}</td>
+                    <td>
+                        <button class="view-skill-btn" data-skill="${skill.name}">View</button>
+                    </td>
+                `;
+                
+                tableBody.appendChild(row);
+            });
+            
+            // Add event listeners to view buttons
+            document.querySelectorAll('.view-skill-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    const skillName = this.getAttribute('data-skill');
+                    
+                    // Switch to home page
+                    document.getElementById('rankingPage').classList.remove('page-active');
+                    document.getElementById('homePage').classList.add('page-active');
+                    
+                    // Set search input and display results
+                    selectSkill(skillName);
+                });
+            });
+        }
+
+        function setupSearch() {
+            const searchInput = document.getElementById('searchInput');
+            const autocompleteList = document.getElementById('autocompleteList');
+            const resultsContainer = document.getElementById('resultsContainer');
+
+            searchInput.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                autocompleteList.innerHTML = '';
+
+                if (searchTerm.length === 0) {
+                    autocompleteList.style.display = 'none';
+                    resultsContainer.style.display = 'none';
+                    return;
+                }
+
+                const matches = uniqueSkills.filter(skill => 
+                    skill.toLowerCase().includes(searchTerm)
+                );
+
+                if (matches.length > 0) {
+                    autocompleteList.style.display = 'block';
+                    matches.forEach(skill => {
+                        const div = document.createElement('div');
+                        div.className = 'autocomplete-item';
+                        div.textContent = skill;
+                        div.addEventListener('click', () => selectSkill(skill));
+                        autocompleteList.appendChild(div);
+                    });
+                } else {
+                    autocompleteList.style.display = 'none';
+                }
+            });
+
+            // Close autocomplete on click outside
+            document.addEventListener('click', function(e) {
+                if (e.target !== searchInput) {
+                    autocompleteList.style.display = 'none';
+                }
+            });
+        }
+
+        function selectSkill(skill) {
+            const searchInput = document.getElementById('searchInput');
+            const autocompleteList = document.getElementById('autocompleteList');
+            const resultsContainer = document.getElementById('resultsContainer');
+            
+            searchInput.value = skill;
+            autocompleteList.style.display = 'none';
+            resultsContainer.style.display = 'block';
+
+            displayConnections(skill);
+        }
+
+        function displayConnections(skill) {
+            const connectionsGrid = document.getElementById('connectionsGrid');
+            const resultsCount = document.getElementById('resultsCount');
+            const collaborators = skillMatrix[skill] || [];
+
+            connectionsGrid.innerHTML = '';
+            resultsCount.textContent = `${collaborators.length} collaborators`;
+
+            if (collaborators.length === 0) {
+                connectionsGrid.innerHTML = `
+                    <div style="grid-column: 1/-1; text-align: center; padding: 2rem;">
+                        <h3 style="margin-bottom: 1rem;">No Collaborators Found</h3>
+                        <p style="color: var(--secondary-text);">No professionals were found who can collaborate with ${skill}</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Sort collaborators by rating (highest first)
+            collaborators.sort((a, b) => b.rating - a.rating);
+
+            collaborators.forEach(collab => {
+                const card = document.createElement('div');
+                card.className = 'connection-card';
+                
+                card.innerHTML = `
+                    <div class="connection-title">
+                        <span>${collab.skill}</span>
+                        <span class="rating-badge">Rating: ${collab.rating}</span>
+                    </div>
+                    <div class="connection-description">${collab.description || 'No description available'}</div>
+                `;
+                
+                card.addEventListener('click', () => selectSkill(collab.skill));
+                connectionsGrid.appendChild(card);
+            });
+        }
+    </script>
+</body>
+</html>
